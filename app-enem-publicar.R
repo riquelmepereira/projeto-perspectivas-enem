@@ -15,10 +15,9 @@ library(plotly)
 # Leitura da base ---------------------------------------------------------
 
 
-link <- "https://www.dropbox.com/scl/fi/1o4qce3vfc5k2glujpjp6/df_enem_2023_filtrado.parquet?rlkey=uszz2lnjeo6hfrf1u7u6bsb7d&st=0ueauk05&dl=1"
+link <- "https://www.dropbox.com/scl/fi/uwgzb9vggtpv8mtr1veav/df_enem_amostra.csv?rlkey=m071kp1bhuf124skx0byx673s&st=pgjb1kau&dl=1"
 # Ler o arquivo CSV
-df <- read_parquet(link)
-
+df <- read_csv(link)
 
 
 # Tratativas na base ----------------------------------------------------
@@ -70,6 +69,7 @@ df_tratado <- df_tratado %>%
       )
     )
 
+
 df_tratado <- df_tratado %>%
   mutate(renda_salarios_min = factor(renda_salarios_min,
                                      levels = c("0 salários mínimos", "Até 1 SM", "1 a 2 SM",
@@ -90,6 +90,7 @@ df_notas <- df_tratado %>%
   select(NU_NOTA_MT, NU_NOTA_CN, NU_NOTA_LC, NU_NOTA_CH, NU_NOTA_REDACAO,
          cor_raca, escola, localizacao_escola, TP_SEXO, SG_UF_PROVA, renda_salarios_min, faixa_etaria_reduzida)
 df_notas$faixa_etaria_reduzida %>% table()
+
 
 # Lendo informaçoes geoespaciais sobre os estados brasileiros
 # Serão utilizados na construção do mapa interativo
@@ -383,7 +384,7 @@ server <- function(input, output) {
   output$barplot_renda <- renderPlot({
     req(input$renda_materia_escolhida)  # Assegura que o input não é NULL
     
-    ggplot(df_tratado, aes(x = renda_salarios_min, y = !!sym(input$renda_materia_escolhida), fill = renda_salarios_min)) +
+    ggplot(df_notas, aes(x = renda_salarios_min, y = !!sym(input$renda_materia_escolhida), fill = renda_salarios_min)) +
       stat_summary(fun = mean, geom = "bar") +
       labs(title = paste("Média da Nota em", nome_prova[[input$renda_materia_escolhida]], "por Faixa de Renda Familiar (em Salários Mínimos)"),
            x = "Faixa de Renda Familiar (Salários Mínimos)",
