@@ -251,7 +251,7 @@ ui <- dashboardPage(
                                 "Sexo" = "TP_SEXO",
                                 "Tipo da escola" = "escola",
                                 "Localização da Escola" = 'localizacao_escola')),
-        plotOutput("score_boxplot"),
+        plotlyOutput("score_boxplot"),
         hr()
       ),
       
@@ -266,7 +266,7 @@ ui <- dashboardPage(
                                 "Ciências Humanas" = "NU_NOTA_CH",
                                 "Ciências da Natureza" = "NU_NOTA_CN",
                                 "Redação" = "NU_NOTA_REDACAO")),
-        plotOutput("barplot_renda"),
+        plotlyOutput("barplot_renda"),
         hr(),
         h2("Distribuição pelas faixas etárias"),
         p("Pelos boxplots, podemos ver as diferenças das notas entre as faixas etárias."),
@@ -276,7 +276,7 @@ ui <- dashboardPage(
                                 "Ciências Humanas" = "NU_NOTA_CH",
                                 "Ciências da Natureza" = "NU_NOTA_CN",
                                 "Redação" = "NU_NOTA_REDACAO")),
-        plotOutput("boxplot_idade")
+        plotlyOutput("boxplot_idade")
       ),
       
       ## Comparação regional ----
@@ -364,44 +364,48 @@ ui <- dashboardPage(
 server <- function(input, output) {
   
   ## Boxplots por Segmentação -----
-  output$score_boxplot <- renderPlot({
+  output$score_boxplot <- renderPlotly({
     # obtendo os nomes mapeados para o título do gráfico
     nome_legivel_area <- nome_prova[[input$area]]
     nome_legivel_segmento <- nome_segmento[[input$segment]]
     
     # criação do boxplot 
-    ggplot(df_notas, aes(x = !!sym(input$segment), y = !!sym(input$area), fill = !!sym(input$segment))) +
+    p <- ggplot(df_notas, aes(x = !!sym(input$segment), y = !!sym(input$area), fill = !!sym(input$segment))) +
       geom_boxplot(outliers=FALSE) +
       labs(title = paste("Distribuição de Notas em", nome_legivel_area, "por", nome_legivel_segmento),
            x = nome_legivel_segmento,
            y = "Nota") +
       theme_minimal() +
       theme(legend.position = "none")  # Remover a legenda
-    
+    ggplotly(p)
   })
   
   ## Por faixas -----
-  output$barplot_renda <- renderPlot({
-    req(input$renda_materia_escolhida)  # Assegura que o input não é NULL
+  output$barplot_renda <- renderPlotly({
+    req(input$renda_materia_escolhida)  # assegura que o input não é NULL
     
-    ggplot(df_notas, aes(x = renda_salarios_min, y = !!sym(input$renda_materia_escolhida), fill = renda_salarios_min)) +
+    p <- ggplot(df_notas, aes(x = renda_salarios_min, y = !!sym(input$renda_materia_escolhida), fill = renda_salarios_min)) +
       stat_summary(fun = mean, geom = "bar") +
+      scale_fill_viridis_d() +  
       labs(title = paste("Média da Nota em", nome_prova[[input$renda_materia_escolhida]], "por Faixa de Renda Familiar (em Salários Mínimos)"),
            x = "Faixa de Renda Familiar (Salários Mínimos)",
            y = "Média da Nota") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1),
             legend.position = "none")  # Remover a legenda
+    ggplotly(p)
   })
-  output$boxplot_idade <- renderPlot({
-    ggplot(df_notas, aes(x = faixa_etaria_reduzida, y = !!sym(input$faixa_idade_materia_escolhida), fill = faixa_etaria_reduzida)) +
-      geom_boxplot(outliers=F) +
+  output$boxplot_idade <- renderPlotly({
+    p <- ggplot(df_notas, aes(x = faixa_etaria_reduzida, y = !!sym(input$faixa_idade_materia_escolhida), fill = faixa_etaria_reduzida)) +
+      geom_boxplot(outliers=FALSE) +
+      scale_fill_viridis_d() +  
       labs(title = paste("Distribuição de Notas em", nome_prova[[input$faixa_idade_materia_escolhida]], "por Faixa Etária"),
            x = "Faixa Etária",
            y = "Nota") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1),
             legend.position = "none") 
+    ggplotly(p)
     }
   )
   
