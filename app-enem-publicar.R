@@ -165,7 +165,7 @@ ui <- dashboardPage(
         icon = icon("user")
       ),
       menuItem(
-        "Comparação Regional",
+        "Comparação Estadual",
         tabName = "comparacao_regional",
         icon = icon("map-marker-alt")
       ),
@@ -199,7 +199,7 @@ ui <- dashboardPage(
             p("Os dados foram obtidos do Enem 2023, disponíveis publicamente. Para acessar o dicionário com a descrição das 76 variáveis, clique", 
               a("aqui", href = "https://github.com/riquelmepereira/projeto-perspectivas-enem/blob/main/Dicion%C3%A1rio_Microdados_Enem_2023.xlsx", target = "_blank"), ".",
               style = "text-align: justify;"),
-            p("As análises incluem a distribuição das notas, comparações regionais e correlações entre as áreas do conhecimento. Diferentes visualizações foram criadas para podermos responder as perguntas principais da pesquisa, disponíveis na seção de perguntas. Assim, o usuário do dashboard pode seguir tais perguntas para se orientar nas visualizações de acordo com o seu interesse.",
+            p("As análises incluem a distribuição das notas, comparações estaduais e correlações entre as áreas do conhecimento. Diferentes visualizações foram criadas para podermos responder as perguntas principais da pesquisa, disponíveis na seção de perguntas. Assim, o usuário do dashboard pode seguir tais perguntas para se orientar nas visualizações de acordo com o seu interesse.",
               style = "text-align: justify;"),
             p(
               "Utilizamos o software R, juntamente com os pacotes ", 
@@ -228,7 +228,8 @@ ui <- dashboardPage(
             p("5. Alunos com rendas familiares mais modestas têm desempenho menor que o de alunos com renda familiares altas?"),
             p("6. Há diferença entre as notas de acordo com a faixa etária do participante?"),
             p("7. Como as notas se comportam nos diferentes estados do país?"),
-            p("8. Quais são as correlações entre as notas das diferentes áreas do conhecimento?")
+            p("8. Quais são as correlações entre as notas das diferentes áreas do conhecimento?",
+            p("9. Podemos formar agrupamentos de alunos baseado em suas notas?")  )
           )
         )
       ),
@@ -284,7 +285,7 @@ ui <- dashboardPage(
         tabName = "comparacao_regional",
         h2("Comparação Regional das Notas"),
         div(style = "text-align: justify;",  
-            p("Os gráficos de comparação regional e o mapa interativo destacam as diferenças de desempenho entre os estados brasileiros. Alguns estados mostram um desempenho superior em áreas específicas, enquanto outros apresentam desafios maiores.")
+            p("Os gráficos da comparação estadual e o mapa interativo destacam as diferenças de desempenho entre os estados brasileiros. Alguns estados mostram um desempenho superior em áreas específicas, enquanto outros apresentam desafios maiores.")
         ),
         hr(),
         h2("Mapa"),
@@ -313,7 +314,28 @@ ui <- dashboardPage(
                                 "Redação" = "NU_NOTA_REDACAO"),
                     selected = c("NU_NOTA_MT", "NU_NOTA_LC", "NU_NOTA_CH", "NU_NOTA_CN", "NU_NOTA_REDACAO"),
                     multiple = TRUE),
-        plotOutput('correlacao_plot')
+        plotOutput('correlacao_plot'),
+        hr(),
+        h3("Visualização da Correlação com Gráfico de Dispersão"),
+        p("Selecione duas provas para visualizar como suas notas se relacionam."),
+        
+        selectInput("scatter_x_var", "Selecione a Variável X", 
+                    choices = c("Matemática" = "NU_NOTA_MT", 
+                                "Linguagens" = "NU_NOTA_LC",
+                                "Ciências Humanas" = "NU_NOTA_CH",
+                                "Ciências da Natureza" = "NU_NOTA_CN",
+                                "Redação" = "NU_NOTA_REDACAO"),
+                    selected = "NU_NOTA_MT"),
+        
+        selectInput("scatter_y_var", "Selecione a Variável Y", 
+                    choices = c("Matemática" = "NU_NOTA_MT", 
+                                "Linguagens" = "NU_NOTA_LC",
+                                "Ciências Humanas" = "NU_NOTA_CH",
+                                "Ciências da Natureza" = "NU_NOTA_CN",
+                                "Redação" = "NU_NOTA_REDACAO"),
+                    selected = "NU_NOTA_LC"),
+        
+        plotOutput("scatter_plot")
       ),
       
       ## Sobre ----
@@ -375,7 +397,7 @@ server <- function(input, output) {
       labs(title = paste("Distribuição de Notas em", nome_legivel_area, "por", nome_legivel_segmento),
            x = nome_legivel_segmento,
            y = "Nota") +
-      theme_minimal() +
+      theme_classic() +
       theme(legend.position = "none")  # Remover a legenda
     ggplotly(p)
   })
@@ -390,7 +412,7 @@ server <- function(input, output) {
       labs(title = paste("Média da Nota em", nome_prova[[input$renda_materia_escolhida]], "por Faixa de Renda Familiar (em Salários Mínimos)"),
            x = "Faixa de Renda Familiar (Salários Mínimos)",
            y = "Média da Nota") +
-      theme_minimal() +
+      theme_classic() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1),
             legend.position = "none")  # Remover a legenda
     ggplotly(p)
@@ -402,7 +424,7 @@ server <- function(input, output) {
       labs(title = paste("Distribuição de Notas em", nome_prova[[input$faixa_idade_materia_escolhida]], "por Faixa Etária"),
            x = "Faixa Etária",
            y = "Nota") +
-      theme_minimal() +
+      theme_classic() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1),
             legend.position = "none") 
     ggplotly(p)
@@ -449,7 +471,7 @@ server <- function(input, output) {
       labs(title = paste("Média da nota de", str_to_lower(nome_legivel), "por estado"),
            x = "Região",
            y = "Média de Nota") +
-      theme_minimal() +
+      theme_classic() +
       theme(legend.position = "none")
     
     ggplotly(p)  
@@ -457,14 +479,34 @@ server <- function(input, output) {
   
   
   ## Correlação de Notas ----
+  
+  # matriz de correlações
+  
   output$correlacao_plot <- renderPlot({
-    notas <- df_notas %>% 
+    notas <- df_notas %>%
       select(all_of(input$selected_vars)) %>%
       na.omit()
     cor_matrix <- cor(notas)
     
+    # Substituindo os nomes das colunas e linhas pelos nomes das provas
+    colnames(cor_matrix) <- sapply(colnames(cor_matrix), function(x) nome_prova[[x]])
+    rownames(cor_matrix) <- sapply(rownames(cor_matrix), function(x) nome_prova[[x]])
+    
     corrplot(cor_matrix, method = "color", addCoef.col = "black", tl.col = "black", number.cex = 0.7,
-             addCoefasPercent = TRUE)  # Adiciona os valores de correlação nas células
+             addCoefasPercent = TRUE)
+    
+    # gráfico de dispersão entre 2 variáveis
+  output$scatter_plot <- renderPlot({
+    req(input$scatter_x_var, input$scatter_y_var)
+      
+    ggplot(df_notas, aes_string(x = input$scatter_x_var, y = input$scatter_y_var)) +
+      geom_point(alpha = 0.5, color = "#2A5783") +
+      labs(title = paste("Relação entre", nome_prova[[input$scatter_x_var]], "e", nome_prova[[input$scatter_y_var]]),
+             x = nome_prova[[input$scatter_x_var]],
+             y = nome_prova[[input$scatter_y_var]]) +
+      theme_classic()
+    
+    })
   })
   
   
